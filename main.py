@@ -10,10 +10,10 @@ import requests
 from astral.sun import sun
 from astral.moon import moonrise, moonset
 from astral import LocationInfo, moon
-from astral.geocoder import database, lookup
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 wd_model = replicate.models.get("cjwbw/waifu-diffusion")
+upscale_model = replicate.models.get("nightmareai/real-esrgan")
 # Get OWM_API_KEY from environment variable
 OWM_API_KEY = os.environ.get("OWM_API_KEY")
 
@@ -23,16 +23,52 @@ def get_base_prompt():
         "outdoors",
         "scenery",
         "4k",
-        "wallpaper",
         "from behind",
         "1girl",
-        "wide_shot",
+        "masterpiece",
+        "best quality",
+        "masterpiece",
+        "best quality",
+        "landscape",
+        "ivan shishkin"
     ]
 
-def get_character_prompts():
-    return [
+def get_character_prompts(seed):
+    hair_len = [
+        "long hair",
         "very long hair",
+        "short hair"
     ]
+
+    hair_color = [
+        "white hair",
+        "brown hair",
+        "purple hair",
+        "blonde hair",
+        "black hair",
+        "red hair",
+        "blue hair",
+        "green hair",
+    ]
+
+    position = [
+        "standing",
+        "sitting",
+    ]
+
+    accessory = [
+        "hat",
+        "witch hat",
+        "ribbon",
+        "cat ears"
+        "",
+        ""
+    ]
+    
+    # Seed the random number generator
+    # And then pick some combination of the above
+    random.seed(seed)
+    return random.sample(hair_len, 1) + random.sample(hair_color, 1) + random.sample(position, 1) + random.sample(accessory, 1)
 
 def get_season(dt):
     Y = 2000 # dummy leap year to allow input X-02-29 (leap day)
@@ -65,9 +101,6 @@ def get_season_prompts(dt):
 
     return tagMap[season]
 
-def get_city():
-    return LocationInfo("London", "England", "Europe/London", 51.5, -0.116)
-
 # TODO: maybe affect weather
 def get_night_prompts(city, dt, weather):
     rise = moonrise(city.observer, dt, tzinfo=city.tzinfo) # timestamp
@@ -81,18 +114,18 @@ def get_night_prompts(city, dt, weather):
     # 21 .. 27.99	Last quarter
 
     # if the moon is up, use it
-    night_tags = ["night"]
+    night_tags = ["night", "darkness"]
     if dt > rise or dt < set:
         if phase < 14 and phase >= 7:
-            night_tags.append("crescent moon")
+            night_tags.append("((crescent moon))")
         elif phase < 21:
-            night_tags.append("full moon")
+            night_tags.append("((full moon))")
         else:
-            night_tags.append("crescent moon")
+            night_tags.append("((crescent moon))")
     
     # TODO: update once I have weather logic
     if weather == "clear":
-        night_tags.append("starry sky")
+        night_tags.append("(starry sky)")
 
     return night_tags
 
@@ -216,7 +249,7 @@ def default_gen(seed):
 
 def gen_prompt(location, dt, seed):
     prompt = get_base_prompt()
-    prompt.extend(get_character_prompts())
+    prompt.extend(get_character_prompts(seed))
 
     # Get the current city
     city = location
@@ -240,13 +273,20 @@ def gen_prompt(location, dt, seed):
 def get_image():
     # Get the current day to use as a seed
     now = datetime.datetime.now()
-    seed = now.day
+    seed = now.second
 
     prompt = default_gen(seed)
     # join prompt with ", "
     prompt = ", ".join(prompt)
 
+    print(prompt)
+
     return wd_model.predict(prompt=prompt, width=1024, height=512, num_inference_steps=60, seed=seed)
+
+def upscale(path):
+    # Do upscale
+    in_img = open(path, "rb")
+    return upscale_model.predict(image=in_img)
 
 def download_image(url):
     # Download the image as [timestamp].png
@@ -269,8 +309,10 @@ def set_wallpaper(img_path):
 def update_wallpaper():
     img_url = get_image()
     img_path = download_image(img_url[0])
+    upscale_url= upscale(img_path)
+    upscale_path = download_image(upscale_url)
 
-    set_wallpaper(img_path)
+    set_wallpaper(upscale_path)
 
 def main(): 
     update_wallpaper()
