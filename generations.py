@@ -258,7 +258,7 @@ def get_image(location: LocationInfo, gen_config: dict):
     prompt = ", ".join(prompt)
     neg_prompt = ", ".join(neg_prompt)
 
-    return wd_model.predict(prompt=prompt, negative_prompt=neg_prompt, width=1024, height=640, num_inference_steps=25, seed=seed)
+    return wd_model.predict(prompt=prompt, negative_prompt=neg_prompt, width=1024, height=640, num_inference_steps=50, seed=seed, scheduler="K_EULER_ANCESTRAL")
 
 def upscale(path):
     # Do upscale
