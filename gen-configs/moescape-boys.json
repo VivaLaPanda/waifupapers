@@ -1,0 +1,29 @@
+{
+    "base": {
+        "prompt": [
+            "no humans",
+            "outdoors",
+            "scenery",
+            "wide shot",
+            "4k",
+            "masterpiece",
+            "best quality",
+            "landscape",
+            "scenery",
+            "depth of field"
+        ],
+        "negative_prompt": [
+            "1girl",
+            "3boys",
+            "multiple girls",
+            "multiple boys",
+            "nsfw",
+            "unsafe",
+            "muscular",
+            "lowres",
+            "signature",
+            "watermark"
+        ]
+    },
+    "character": {}
+}

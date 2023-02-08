@@ -1,0 +1,58 @@
+{
+    "base": {
+        "prompt": [
+            "2boys",
+            "bishounen",
+            "from behind",
+            "facing away",
+            "outdoors",
+            "scenery",
+            "wide shot",
+            "4k",
+            "masterpiece",
+            "best quality",
+            "landscape",
+            "scenery"
+        ],
+        "negative_prompt": [
+            "1girl",
+            "3boys",
+            "multiple girls",
+            "multiple boys",
+            "nsfw",
+            "unsafe",
+            "muscular",
+            "lowres",
+            "signature"
+        ]
+    },
+    "character": {
+        "hair_len": [
+            "long hair",
+            "very long hair",
+            "short hair"
+        ],
+        "hair_color": [
+            "white hair",
+            "brown hair",
+            "purple hair",
+            "blonde hair",
+            "black hair",
+            "red hair",
+            "blue hair",
+            "green hair"
+        ],
+        "position": [
+            "standing",
+            "sitting"
+        ],
+        "accessory": [
+            "hat",
+            "witch hat",
+            "ribbon",
+            "cat ears",
+            "",
+            ""
+        ]
+    }
+}

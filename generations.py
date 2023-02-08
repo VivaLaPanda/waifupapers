@@ -14,71 +14,26 @@ from astral import LocationInfo, moon
 
 dotenv.load_dotenv()
 
-wd_model = replicate.models.get("cjwbw/anything-v4.0")
+wd_model = replicate.models.get("tstramer/waifu-diffusion")
 upscale_model = replicate.models.get("nightmareai/real-esrgan")
 # Get OWM_API_KEY from environment variable
 OWM_API_KEY = os.environ.get("OWM_API_KEY")
 
-def get_base_prompt() -> Tuple[List[str], List[str]]:
-    # from behind, outdoors, scenery, 4k, wallpaper
-    return ([
-        "outdoors",
-        "scenery",
-        "wide shot",
-        "4k",
-        "masterpiece",
-        "best quality",
-        "dramatic light",
-        "landscape",
-        "realistic",
-        "depth of field"
-    ], [
-        "1girl",
-        "multiple girls",
-        "multiple boys",
-        "nsfw",
-        "unsafe",
-        "muscular",
-        "lowres",
-        "signature"
-    ])
+def get_base_prompt(gen_config: dict) -> Tuple[List[str], List[str]]:
+    return gen_config["base"]["prompt"], gen_config["base"]["negative_prompt"]
 
-def get_character_prompts(seed):
-    hair_len = [
-        "long hair",
-        "very long hair",
-        "short hair"
-    ]
+def get_character_prompts(seed, gen_config: dict) -> List[str]:
+    # if the gen config for character is none or empty, return an empty list
+    if not gen_config["character"]:
+        return []   
 
-    hair_color = [
-        "white hair",
-        "brown hair",
-        "purple hair",
-        "blonde hair",
-        "black hair",
-        "red hair",
-        "blue hair",
-        "green hair",
-    ]
-
-    position = [
-        "standing",
-        "sitting",
-    ]
-
-    accessory = [
-        "hat",
-        "witch hat",
-        "ribbon",
-        "cat ears"
-        "",
-        ""
-    ]
+    # The above but as a single big json
+    chacter_prompts = gen_config["character"]
     
     # Seed the random number generator
     # And then pick some combination of the above
     random.seed(seed)
-    return random.sample(hair_len, 1) + random.sample(hair_color, 1) + random.sample(position, 1) + random.sample(accessory, 1)
+    return random.sample(chacter_prompts["hair_len"], 1) + random.sample(chacter_prompts["hair_color"], 1) + random.sample(chacter_prompts["position"], 1) + random.sample(chacter_prompts["accessory"], 1)
 
 def get_season(dt):
     Y = 2000 # dummy leap year to allow input X-02-29 (leap day)
@@ -253,18 +208,18 @@ def get_user_location() -> LocationInfo:
     l.longitude = g.latlng[1]
     return l
 
-def default_gen(seed, user_location: LocationInfo) -> Tuple[List[str], List[str]]:
+def default_gen(seed, user_location: LocationInfo, gen_config: dict) -> Tuple[List[str], List[str]]:
     # Get the current datetime localized to the current timezone
     now = datetime.datetime.now(pytz.timezone(user_location.timezone))
 
     # For testing, add hours to the time
     #now = now + datetime.timedelta(hours=10)
 
-    return gen_prompt(user_location, now, seed)
+    return gen_prompt(user_location, now, seed, gen_config)
 
-def gen_prompt(location, dt, seed) -> Tuple[List[str], List[str]]:
-    prompt, neg_prompt = get_base_prompt()
-    # prompt.extend(get_character_prompts(seed))
+def gen_prompt(location, dt, seed, gen_config: dict) -> Tuple[List[str], List[str]]:
+    prompt, neg_prompt = get_base_prompt(gen_config)
+    prompt.extend(get_character_prompts(seed, gen_config))
 
     # Get the current city
     city = location
@@ -289,17 +244,17 @@ def gen_prompt(location, dt, seed) -> Tuple[List[str], List[str]]:
     return prompt, neg_prompt
 
 # Generates the starting image for a location
-def get_image(location: LocationInfo):
+def get_image(location: LocationInfo, gen_config: dict):
     # Get the current day to use as a seed
     now = datetime.datetime.now()
     seed = now.day
 
-    prompt, neg_prompt = default_gen(seed, location)
+    prompt, neg_prompt = default_gen(seed, location, gen_config)
     # join prompt with ", "
     prompt = ", ".join(prompt)
     neg_prompt = ", ".join(neg_prompt)
 
-    return wd_model.predict(prompt=prompt, negative_prompt=neg_prompt, width=1024, height=640, num_inference_steps=50, seed=seed)
+    return wd_model.predict(prompt=prompt, negative_prompt=neg_prompt, width=1024, height=640, num_inference_steps=25, seed=seed)
 
 def upscale(path):
     # Do upscale
