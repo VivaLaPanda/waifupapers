@@ -23,17 +23,21 @@ def get_base_prompt(gen_config: dict) -> Tuple[List[str], List[str]]:
     return gen_config["base"]["prompt"], gen_config["base"]["negative_prompt"]
 
 def get_character_prompts(seed, gen_config: dict) -> List[str]:
-    # if the gen config for character is none or empty, return an empty list
-    if not gen_config["character"]:
-        return []   
-
-    # The above but as a single big json
-    chacter_prompts = gen_config["character"]
+    # if the gen config for character is length 0, return empty list
+    if len(gen_config["characters"]) == 0:
+        return []
     
-    # Seed the random number generator
-    # And then pick some combination of the above
-    random.seed(seed)
-    return random.sample(chacter_prompts["hair_len"], 1) + random.sample(chacter_prompts["hair_color"], 1) + random.sample(chacter_prompts["position"], 1) + random.sample(chacter_prompts["accessory"], 1)
+    # loop over the characters in the gen config list
+    # and add them to a list of prompts
+    chacter_prompts = []
+    for character in gen_config["characters"]:
+        # Seed the random number generator
+        # And then pick some combination of the above
+        random.seed(seed)
+        prompts =  random.sample(character["hair_len"], 1) + random.sample(character["hair_color"], 1) + random.sample(character["position"], 1) + random.sample(character["accessory"], 1)
+        chacter_prompts += prompts
+    
+    return chacter_prompts
 
 def get_season(dt):
     Y = 2000 # dummy leap year to allow input X-02-29 (leap day)

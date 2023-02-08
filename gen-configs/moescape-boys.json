@@ -2,6 +2,8 @@
     "base": {
         "prompt": [
             "no humans",
+            "Ivan Shishkin",
+            "wallpaper",
             "outdoors",
             "scenery",
             "wide shot",
@@ -9,21 +11,21 @@
             "masterpiece",
             "best quality",
             "landscape",
-            "scenery",
-            "depth of field"
+            "scenery"
         ],
         "negative_prompt": [
             "1girl",
             "3boys",
+            "multiple views",
+            "collage",
             "multiple girls",
             "multiple boys",
             "nsfw",
             "unsafe",
             "muscular",
             "lowres",
-            "signature",
-            "watermark"
+            "signature"
         ]
     },
-    "character": {}
+    "characters":[]
 }

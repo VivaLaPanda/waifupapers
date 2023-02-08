@@ -5,6 +5,8 @@
             "bishounen",
             "from behind",
             "facing away",
+            "Ivan Shishkin",
+            "wallpaper",
             "outdoors",
             "scenery",
             "wide shot",
@@ -17,6 +19,8 @@
         "negative_prompt": [
             "1girl",
             "3boys",
+            "multiple views",
+            "collage",
             "multiple girls",
             "multiple boys",
             "nsfw",
@@ -26,7 +30,7 @@
             "signature"
         ]
     },
-    "character": {
+    "characters": [{
         "hair_len": [
             "long hair",
             "very long hair",
@@ -54,5 +58,5 @@
             "",
             ""
         ]
-    }
+    }]
 }
