@@ -102,12 +102,14 @@ def set_skylight(image_path: str, frame_id: str):
     assets = get_assets(frame_id)
 
     # Upload the image
+    print(f"Uploading image {image_path} to frame {frame_id}...")
     upload_image(frame_id, image_path)
 
-    # Wait 30 seconds for the image to upload
+    # Wait 15 seconds for the image to upload
     time.sleep(15)
 
     # Delete all old assets if there are any
+    print(f"Deleting {len(assets)} old assets from frame {frame_id}...")
     if len(assets) > 0:
         asset_ids = [asset["id"] for asset in assets]
         delete_assets(frame_id, asset_ids)
@@ -135,18 +137,24 @@ def update_skylight(frame_id: str, gen_config: dict = {}):
     upscale_url= upscale(img_path)
     upscale_path = download_image(upscale_url)
 
+    print(f"Upscaled image to {upscale_path} from {img_path}...")
+
     # delete original image
     os.remove(img_path)
+
+    print(f"Deleted original image {img_path}...")
 
     set_skylight(upscale_path, frame_id)
 
 def main():
     # Get the frames from the ./gen-configs/frames.json file
+    print("Reading frames.json")
     framefile = open("./gen-configs/frames.json", "r")
     frames = json.load(framefile) # type: dict[str, str]
     framefile.close()
 
     for frame, config in frames.items():
+        print(f"Updating frame {frame} with config {config}...")
         # Read in the generation config
         gen_config_file = open(f"./gen-configs/{config}.json", "r")
         gen_config = json.load(gen_config_file)
