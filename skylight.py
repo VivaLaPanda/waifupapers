@@ -70,8 +70,7 @@ def upload_image(frame_id: str, image_path: str) -> None:
 
     # Get the upload URL
     # curl 'https://app.ourskylight.com/api/upload_urls' \
-    # -H 'accept: application/json, text/plain, */*' \
-    # -H 'authorization: Basic NTk5Njc4MzpkMzUxNTkzZDA1YzM5YWE5N2M0NDQyZjU1MGM2ZDdhNw==' \
+    # -H 'accept: application/json, text/plain, */*' \\
     # --data-raw '{"ext":"png","frame_ids":["1369742"]}' \
     resp = requests.post("https://app.ourskylight.com/api/upload_urls", headers={
         "accept": "application/json, text/plain, */*",
