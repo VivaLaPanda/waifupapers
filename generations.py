@@ -1,37 +1,47 @@
+from typing import List, Tuple
 import replicate
 import datetime
-from appscript import mactypes, app
 import os
 import pytz
 import random
 from tzwhere import tzwhere
 import geocoder
 import requests
+import dotenv
 from astral.sun import sun
 from astral.moon import moonrise, moonset
 from astral import LocationInfo, moon
-from apscheduler.schedulers.blocking import BlockingScheduler
 
-wd_model = replicate.models.get("cjwbw/waifu-diffusion")
+dotenv.load_dotenv()
+
+wd_model = replicate.models.get("cjwbw/anything-v4.0")
 upscale_model = replicate.models.get("nightmareai/real-esrgan")
 # Get OWM_API_KEY from environment variable
 OWM_API_KEY = os.environ.get("OWM_API_KEY")
 
-def get_base_prompt():
+def get_base_prompt() -> Tuple[List[str], List[str]]:
     # from behind, outdoors, scenery, 4k, wallpaper
-    return [
+    return ([
         "outdoors",
         "scenery",
+        "wide shot",
         "4k",
-        "from behind",
-        "1girl",
         "masterpiece",
         "best quality",
-        "masterpiece",
-        "best quality",
+        "dramatic light",
         "landscape",
-        "ivan shishkin"
-    ]
+        "realistic",
+        "depth of field"
+    ], [
+        "1girl",
+        "multiple girls",
+        "multiple boys",
+        "nsfw",
+        "unsafe",
+        "muscular",
+        "lowres",
+        "signature"
+    ])
 
 def get_character_prompts(seed):
     hair_len = [
@@ -87,7 +97,7 @@ def get_season(dt):
     return next(season for season, (start, end) in seasons
                 if start <= dt <= end)
 
-def get_season_prompts(dt):
+def get_season_prompts(dt) -> List[str]:
     # Determine the season from the datetime
     season = get_season(dt)
 
@@ -102,7 +112,7 @@ def get_season_prompts(dt):
     return tagMap[season]
 
 # TODO: maybe affect weather
-def get_night_prompts(city, dt, weather):
+def get_night_prompts(city, dt, weather) -> List[str]:
     rise = moonrise(city.observer, dt, tzinfo=city.tzinfo) # timestamp
     set = moonset(city.observer, dt, tzinfo=city.tzinfo) # timestamp
     phase = moon.phase(dt)
@@ -129,7 +139,7 @@ def get_night_prompts(city, dt, weather):
 
     return night_tags
 
-def get_time_prompts(city, dt, weather):
+def get_time_prompts(city, dt, weather) -> List[str]:
     # Determine if it's night, dawn, sunrise, noon, sunset, or dusk using astral
     # https://astral.readthedocs.io/en/latest/
     s = sun(city.observer, dt, tzinfo=city.tzinfo)
@@ -164,42 +174,50 @@ def get_weather(city):
         print(response)
         print(response.content)
 
-def get_weather_prompts(weather, temperature, time_tags):
+# Get the positive and negative tags for the weather
+def get_weather_prompts(weather, temperature, time_tags) -> Tuple[List[str], List[str]]:
     baseWeatherTags = {
-        "clear sky": ["clear sky"],
-        "few clouds": ["cloudy_sky"],
-        "scattered clouds": ["cloudy_sky"], 
-        "broken clouds": ["cloudy_sky"],    
-        "shower rain": ["rain"],
-        "rain": ["rain"],
-        "thunderstorm": ["lightning", "storm", "storm_cloud"],
-        "snow": ["snow"],
-        "mist": ["fog"],
+        "clear sky": (["clear sky"], ["cloudy sky", "cloud"]),
+        "few clouds": (["cloudy sky"], []),
+        "scattered clouds": (["cloudy sky"], []), 
+        "broken clouds": (["cloudy sky"], []),    
+        "shower rain": (["rain"], []),
+        "rain": (["rain"], ["clear sky"]),
+        "thunderstorm": (["lightning", "storm", "storm cloud"], ["clear sky"]),
+        "snow": (["snow"], ["clear sky"]),
+        "mist": (["fog"], ["clear sky"]),
+        "fog": (["fog"], ["clear sky"]),
+        "haze": (["fog", "haze", "smoke"], ["clear sky"]),
     }
     
-    tags = baseWeatherTags[weather]
+    positive_tags, negative_tags = baseWeatherTags[weather]
     if weather == "broken clouds":
         if "day" in time_tags:
-            tags.append("dappled_sunlight")
-            tags.append("sunbeam")
+            positive_tags.append("dappled sunlight")
+            positive_tags.append("sunbeam")
         elif "full moon" in time_tags:
-            tags.append("dappled_moonlight")
+            positive_tags.append("dappled moonlight")
+
+    # if it's not snowy, always negative snow
+    if weather != "snow":
+        negative_tags.append("snow")
     
     # Temperature is in kelvin, so convert to celsius
     temperature = temperature - 273.15
     if temperature < 15:
-        tags.append("winter_clothes")
+        positive_tags.append("winter clothes")
+        positive_tags.append("cold")
     
     if temperature < 5:
-        tags.append("scarf")
-        tags.append("jacket")
+        positive_tags.append("scarf")
+        positive_tags.append("jacket")
     
     if temperature > 100:
-        tags.append("swimsuit")
+        positive_tags.append("swimsuit")
     elif temperature > 85 and weather == "clear sky":
-        tags.append("sun_hat")
+        positive_tags.append("sun_hat")
 
-    return tags
+    return positive_tags, negative_tags
 
 def random_addons(seed):
     addons = [
@@ -220,7 +238,7 @@ def random_addons(seed):
     random.seed(seed)
     return random.sample(addons, 2)
 
-def get_user_location():
+def get_user_location() -> LocationInfo:
     g = geocoder.ip('me')
 
     # Find the timezone given the latlong
@@ -235,10 +253,7 @@ def get_user_location():
     l.longitude = g.latlng[1]
     return l
 
-def default_gen(seed):
-    # Get the users's location
-    user_location = get_user_location()
-
+def default_gen(seed, user_location: LocationInfo) -> Tuple[List[str], List[str]]:
     # Get the current datetime localized to the current timezone
     now = datetime.datetime.now(pytz.timezone(user_location.timezone))
 
@@ -247,20 +262,23 @@ def default_gen(seed):
 
     return gen_prompt(user_location, now, seed)
 
-def gen_prompt(location, dt, seed):
-    prompt = get_base_prompt()
-    prompt.extend(get_character_prompts(seed))
+def gen_prompt(location, dt, seed) -> Tuple[List[str], List[str]]:
+    prompt, neg_prompt = get_base_prompt()
+    # prompt.extend(get_character_prompts(seed))
 
     # Get the current city
     city = location
 
-    # Get the current time prompts
-    prompt.extend(get_time_prompts(city, dt, "clear"))
-
     # Get the current weather
     weather = get_weather(city)
+
+    # Get the current time prompts
+    prompt.extend(get_time_prompts(city, dt, weather["weather"]))
     
-    prompt.extend(get_weather_prompts(weather["weather"], weather["temp"], prompt))
+    # Get the current weather prompts
+    weather_pos_tags, weather_neg_tags = get_weather_prompts(weather["weather"], weather["temp"], prompt)
+    prompt.extend(weather_pos_tags)
+    neg_prompt.extend(weather_neg_tags)
 
     # Get the current season prompts
     prompt.extend(get_season_prompts(dt))
@@ -268,20 +286,20 @@ def gen_prompt(location, dt, seed):
     # Get the current addons
     prompt.extend(random_addons(seed))
 
-    return prompt
+    return prompt, neg_prompt
 
-def get_image():
+# Generates the starting image for a location
+def get_image(location: LocationInfo):
     # Get the current day to use as a seed
     now = datetime.datetime.now()
-    seed = now.second
+    seed = now.day
 
-    prompt = default_gen(seed)
+    prompt, neg_prompt = default_gen(seed, location)
     # join prompt with ", "
     prompt = ", ".join(prompt)
+    neg_prompt = ", ".join(neg_prompt)
 
-    print(prompt)
-
-    return wd_model.predict(prompt=prompt, width=1024, height=512, num_inference_steps=60, seed=seed)
+    return wd_model.predict(prompt=prompt, negative_prompt=neg_prompt, width=1024, height=640, num_inference_steps=50, seed=seed)
 
 def upscale(path):
     # Do upscale
@@ -301,25 +319,3 @@ def download_image(url):
     open(path, 'wb').write(r.content)
 
     return path
-
-def set_wallpaper(img_path):
-    # Set the wallpaper using appscript
-    app('Finder').desktop_picture.set(mactypes.File(img_path))
-
-def update_wallpaper():
-    img_url = get_image()
-    img_path = download_image(img_url[0])
-    upscale_url= upscale(img_path)
-    upscale_path = download_image(upscale_url)
-
-    set_wallpaper(upscale_path)
-
-def main(): 
-    update_wallpaper()
-
-    scheduler = BlockingScheduler()
-    scheduler.add_job(update_wallpaper, 'interval', hours=1)
-    scheduler.start()
-
-if __name__ == "__main__":
-    main()
