@@ -195,8 +195,6 @@ def random_addons(seed):
         "hill",
         "village",
         "campfire",
-        "birds",
-        "sheep",
         "cat",
         "floating island",
         "cave",
