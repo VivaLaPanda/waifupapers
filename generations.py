@@ -249,8 +249,10 @@ def gen_prompt(location, dt, seed, gen_config: dict) -> Tuple[List[str], List[st
 
 # Generates the starting image for a location
 def get_image(location: LocationInfo, gen_config: dict):
+    # Get TzInfo for the location
+    tz = pytz.timezone(location.timezone)
     # Get the current day to use as a seed
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(tz)
     seed = now.day
 
     prompt, neg_prompt = default_gen(seed, location, gen_config)
