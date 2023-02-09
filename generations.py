@@ -14,10 +14,14 @@ from astral import LocationInfo, moon
 
 dotenv.load_dotenv()
 
-wd_model = replicate.models.get("tstramer/waifu-diffusion")
+wd_model = replicate.models.get("tstramer/waifu-diffusion") #default
 upscale_model = replicate.models.get("nightmareai/real-esrgan")
 # Get OWM_API_KEY from environment variable
 OWM_API_KEY = os.environ.get("OWM_API_KEY")
+
+def override_wd_model(model_name: str):
+    global wd_model
+    wd_model = replicate.models.get(model_name)
 
 def get_base_prompt(gen_config: dict) -> Tuple[List[str], List[str]]:
     return gen_config["base"]["prompt"], gen_config["base"]["negative_prompt"]
@@ -190,12 +194,23 @@ def random_addons(seed):
         "waterfall",
         "hill",
         "village",
+        "campfire",
+        "birds",
+        "sheep",
+        "cat",
+        "floating island",
+        "cave",
+        "hut",
+        "castle",
+        "tower",
+        "cottage",
+        "stairs",
     ]
     
     # Seed the random number generator
     # And then pick any two of the above
     random.seed(seed)
-    return random.sample(addons, 2)
+    return random.sample(addons, 3)
 
 def get_user_location() -> LocationInfo:
     g = geocoder.ip('me')
@@ -249,6 +264,9 @@ def gen_prompt(location, dt, seed, gen_config: dict) -> Tuple[List[str], List[st
 
 # Generates the starting image for a location
 def get_image(location: LocationInfo, gen_config: dict):
+    # Override model if specified
+    if "model" in gen_config:
+        override_wd_model(gen_config["model"])
     # Get TzInfo for the location
     tz = pytz.timezone(location.timezone)
     # Get the current day to use as a seed

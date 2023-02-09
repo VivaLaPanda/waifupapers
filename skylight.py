@@ -9,7 +9,7 @@ import os
 from tzwhere import tzwhere
 from astral import LocationInfo
 from apscheduler.schedulers.blocking import BlockingScheduler
-from generations import get_image, download_image, upscale
+from generations import get_image, download_image, upscale, override_wd_model
 
 dotenv.load_dotenv()
 
@@ -106,7 +106,7 @@ def set_skylight(image_path: str, frame_id: str):
     upload_image(frame_id, image_path)
 
     # Wait 15 seconds for the image to upload
-    time.sleep(15)
+    time.sleep(45)
 
     # Delete all old assets if there are any
     print(f"Deleting {len(assets)} old assets from frame {frame_id}...")
@@ -152,6 +152,7 @@ def main():
     framefile = open("./gen-configs/frames.json", "r")
     frames = json.load(framefile) # type: dict[str, str]
     framefile.close()
+    print(f"Found {len(frames)} frames to update...")
 
     for frame, config in frames.items():
         print(f"Updating frame {frame} with config {config}...")
